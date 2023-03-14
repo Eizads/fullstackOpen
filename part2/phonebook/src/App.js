@@ -1,110 +1,175 @@
 import { useState, useEffect } from "react";
-import personService from "./services/persons";
 import Filter from "./components/Filter";
 import PersonForm from "./components/PersonForm";
-import Persons from "./components/Persons";
+import Person from "./components/Person";
+import personService from "./services/persons";
+import Notification from "./components/Notification";
 
 const App = () => {
   const [persons, setPersons] = useState([]);
-  const [newName, setNewName] = useState("");
-  const [newNumber, setNewNumber] = useState("");
-  const [newSearch, setNewSearch] = useState("");
+  const [newName, setNewName] = useState([]);
+  const [newNumber, setNewNumber] = useState([]);
+  const [newSearch, setNewSearch] = useState([]);
+  const [foundSearch, setFoundSearch] = useState(false);
+  const [successMsg, setSuccessMsg] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
 
+  //getting data from json server
   useEffect(() => {
     console.log("effect");
-    personService.getAll().then((initialPersons) => {
-      console.log("promise fulfilled");
-      setPersons(initialPersons);
-    });
+    personService
+      .getAll()
+      .then((initialppl) => {
+        console.log("promise fullfiled");
+        setPersons(initialppl);
+      })
+      .catch((error) => console.log("its not working"));
   }, []);
+  console.log("render", persons.length, "people");
 
-  const addName = (event) => {
+  //adding ppl
+  const addPerson = (event) => {
     event.preventDefault();
+    console.log(event.target);
     const personObj = {
       name: newName,
       number: newNumber,
     };
 
-    personService.create(personObj).then((returnedContact) => {
-      setPersons(persons.concat(returnedContact));
+    // if name of person found
+    if (foundPerson.length === 1) {
+      console.log("the person found is", foundPerson);
 
-      // check if name exists
-      const found = persons.find(
-        (person) => person.name === newName || person.number === newNumber
+      window.confirm(
+        `${newName} is already added to phonebook replace the old number with the new one?`
       );
-      console.log(found);
-      console.log(persons);
-      if (!found) {
-        setPersons(persons.concat(returnedContact));
-      } else {
-        alert(`${newName} or ${newNumber} is already added to the phonebook`);
-        setNewName("");
-        setNewNumber("");
-      }
-    });
-  };
-  const handleNewName = (event) => {
-    console.log(event.target.value);
-    setNewName(event.target.value);
-  };
-  const handleNewNumber = (event) => {
-    console.log(event.target.value);
-    setNewNumber(event.target.value);
-  };
-  const handleSearch = (event) => {
-    console.log(event.target.value);
-    setNewSearch(event.target.value);
-  };
 
-  //filtering persons for search results
-  const searchResult = persons.filter(
-    (person) => person.name.toUpperCase() === newSearch.toUpperCase()
-  );
-  const gettingDeleted = (person) => {
-    console.log(person.id);
-    if (window.confirm(`delete ${person.name}?`)) {
-      personService.remove(person.id);
-      setPersons(persons.filter((p) => p.id !== person.id));
+      const changeNumber = { ...foundPerson[0], number: newNumber };
+      // update number
+      personService
+        .update(foundPerson[0].id, changeNumber)
+        .then((returnedPerson) => {
+          setPersons(
+            persons.map((person) =>
+              person.id !== foundPerson[0].id ? person : returnedPerson
+            )
+          );
+        })
+        .catch((error) => {
+          setErrorMsg(
+            `information on ${foundPerson[0].name} has already been removed from the server.`
+          );
+          setTimeout(() => {
+            setErrorMsg(null);
+          }, 5000);
+        });
+      setNewName("");
+      setNewNumber("");
+    } else {
+      //if not found person add person
+      console.log("person not found");
+      personService.create(personObj).then((updatedppl) => {
+        setPersons(
+          persons.concat(updatedppl),
+          setSuccessMsg(`Added ${personObj.name}`),
+          setTimeout(() => {
+            setSuccessMsg(null);
+          }, 5000)
+        );
+      });
+
+      setNewName("");
+      setNewNumber("");
+    }
+  };
+  //filtering person based on name field
+  const foundPerson = persons.filter((person) => {
+    const searchingFor = person.name.toString().toUpperCase();
+    return searchingFor.includes(newName.toString().toUpperCase());
+    // String(person.name).toLowerCase() === String(newSearch).toLowerCase()
+  });
+
+  //   //finding person based on search field
+  const filteredPerson = persons.filter((person) => {
+    const searchingFor = person.name.toString().toUpperCase();
+    return searchingFor.includes(newSearch.toString().toUpperCase());
+    // String(person.name).toLowerCase() === String(newSearch).toLowerCase()
+  });
+
+  //event handler for search
+  const handleNewSearch = (event) => {
+    console.log("new search", event.target.value);
+    setNewSearch(event.target.value);
+    if (filteredPerson.length === 1) {
+      setFoundSearch(!foundSearch);
+    } else {
+      setFoundSearch(foundSearch);
     }
   };
 
-  console.log("render", persons.length, "persons");
+  //event handler for new name
+  const handleNewName = (event) => {
+    console.log("new name", event.target.value);
+    setNewName(event.target.value);
+  };
+
+  //event handler for new number
+  const handleNewNumber = (event) => {
+    console.log("new number", event.target.value);
+    setNewNumber(event.target.value);
+  };
+
+  //deleting ppl
+  const deletePerson = (id, name) => {
+    if (window.confirm(`Delete ${name}?`)) {
+      console.log(`person erased has id ${id}`);
+      // const person = persons.find((p) => p.id === id);
+      personService.erase(id);
+      setPersons(persons.filter((p) => p.id !== id));
+    }
+  };
+
+  //showing content based on search or all ppl
+  const result = foundSearch ? filteredPerson : persons;
 
   return (
     <div>
-      <div>debug: {newName}</div>
       <h2>Phonebook</h2>
-
-      <div>
-        Filter shown with <input value={newSearch} onChange={handleSearch} />
-      </div>
-
-      {searchResult.map((person) => (
-        <Filter
-          key={person.id}
-          person={person}
-          newSearch={newSearch}
-          handleSearch={handleSearch}
-        />
-      ))}
-      <h3>Add a new</h3>
-
+      <Notification message={successMsg} msgClass={"success"} />
+      <Notification message={errorMsg} msgClass={"fail"} />
+      <Filter newSearch={newSearch} handleNewSearch={handleNewSearch} />
+      {/* <div>
+        Filter shown with <input value={newSearch} onChange={handleNewSearch} />
+      </div> */}
+      <h2>Add a new</h2>
       <PersonForm
-        addName={addName}
-        newNumber={newNumber}
+        addPerson={addPerson}
         newName={newName}
         handleNewName={handleNewName}
+        newNumber={newNumber}
         handleNewNumber={handleNewNumber}
       />
-
+      {/* <form onSubmit={addPerson}>
+        <div>
+          name: <input value={newName} onChange={handleNewName} />
+        </div>
+        <div>
+          number <input value={newNumber} onChange={handleNewNumber} />
+        </div>
+        <div>
+          <button type="submit">add</button>
+        </div>
+      </form> */}
       <h2>Numbers</h2>
-
-      {persons.map((person) => (
-        <Persons
+      {result.map((person) => (
+        <Person
           key={person.id}
           person={person}
-          handleDelete={() => gettingDeleted(person)}
+          handleClick={() => deletePerson(person.id, person.name)}
         />
+        // <p key={person.id}>
+        //   {person.name} {person.number}
+        // </p>
       ))}
     </div>
   );

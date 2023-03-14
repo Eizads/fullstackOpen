@@ -1,4 +1,6 @@
-import React from "react";
-
-const Filter = ({ person }) => <p>Search result: {person.name}</p>;
+const Filter = ({ newSearch, handleNewSearch }) => (
+  <div>
+    Filter shown with <input value={newSearch} onChange={handleNewSearch} />
+  </div>
+);
 export default Filter;
