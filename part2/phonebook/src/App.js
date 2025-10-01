@@ -27,6 +27,14 @@ const App = () => {
   }, []);
   console.log("render", persons.length, "people");
 
+  // Helper function for filtering persons by name
+  const filterPersonsByName = (personsList, searchName) => {
+    return personsList.filter((person) => {
+      const searchingFor = person.name.toString().toUpperCase();
+      return searchingFor.includes(searchName.toString().toUpperCase());
+    });
+  };
+
   //adding ppl
   const addPerson = (event) => {
     event.preventDefault();
@@ -35,6 +43,9 @@ const App = () => {
       name: newName,
       number: newNumber,
     };
+
+    // Check if person with this name already exists
+    const foundPerson = filterPersonsByName(persons, newName);
 
     // if name of person found
     if (foundPerson.length === 1) {
@@ -82,19 +93,9 @@ const App = () => {
       setNewNumber("");
     }
   };
-  //filtering person based on name field
-  const foundPerson = persons.filter((person) => {
-    const searchingFor = person.name.toString().toUpperCase();
-    return searchingFor.includes(newName.toString().toUpperCase());
-    // String(person.name).toLowerCase() === String(newSearch).toLowerCase()
-  });
 
-  //   //finding person based on search field
-  const filteredPerson = persons.filter((person) => {
-    const searchingFor = person.name.toString().toUpperCase();
-    return searchingFor.includes(newSearch.toString().toUpperCase());
-    // String(person.name).toLowerCase() === String(newSearch).toLowerCase()
-  });
+  // Finding person based on search field
+  const filteredPerson = filterPersonsByName(persons, newSearch);
 
   //event handler for search
   const handleNewSearch = (event) => {
